@@ -1,0 +1,27 @@
+{
+  "extends": "@tsconfig/node22/tsconfig.json",
+
+  "include": [
+    "src/**/*.ts",
+    "src/types/**/*.d.ts" // 👈 include custom type augmentations
+  ],
+
+  "compilerOptions": {
+    "outDir": "dist/plain-js",
+    "rootDir": "src",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "noEmit": false,
+
+    // 👇 ensure Express type augmentation is picked up
+    "typeRoots": [
+      "./src/types",        // your custom types
+      "./node_modules/@types"
+    ],
+
+    // 👇 remove explicit "types": ["node"] because it restricts auto-loading of express types
+    // TypeScript will automatically pick up types from node_modules/@types
+  }
+}
