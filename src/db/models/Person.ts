@@ -10,6 +10,7 @@ export interface IPerson extends Document {
   first_name: string;
   last_name: string;
   email: string;
+  image?: string;
   gender: Gender;
   address: string;
   created_at?: Date;
@@ -38,6 +39,9 @@ const personSchema = new Schema<IPerson>(
       unique: true,
       lowercase: true,
       trim: true
+    },
+    image: {
+      type: String
     },
     gender: {
       type: String,

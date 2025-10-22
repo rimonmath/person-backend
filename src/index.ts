@@ -35,25 +35,26 @@ var allowedOrigins = [
   'https://person-monorepo-frontend.vercel.app'
 ];
 
-const corsOptions: CorsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, or Postman)
-    if (!origin) return callback(null, true);
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true
+  })
+);
 
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true // allow cookies or Authorization headers
-};
-
-app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
 app.use(morgan('tiny')); // Logs requests (for development)
+
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static('uploads')
+);
 
 // Routes
 app.use('/', homeRoutes);

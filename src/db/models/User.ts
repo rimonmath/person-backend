@@ -8,6 +8,7 @@ export enum UserType {
 export interface IUser extends Document {
   full_name: string;
   email: string;
+  image?: string;
   password: string;
   user_type: UserType;
   created_at?: Date;
@@ -29,6 +30,9 @@ const UserSchema = new Schema<IUser>(
       unique: true,
       lowercase: true,
       trim: true
+    },
+    image: {
+      type: String
     },
     password: {
       type: String,

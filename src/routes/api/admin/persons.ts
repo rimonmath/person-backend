@@ -2,6 +2,8 @@ import express, { NextFunction, type Request, type Response } from 'express';
 import { ReqWithValidated, zValidator } from '../../../middlewares/zValidator.js';
 import { object as zObject, string as zString, email as zEmail, enum as zEnum } from 'zod';
 import { Person } from '../../../db/models/Person.js';
+import { uploadSingle } from '../../../middlewares/fileUpload.js';
+import fs from 'node:fs';
 const router = express.Router();
 
 const addPersonSchema = zObject({
@@ -54,6 +56,53 @@ router
       }
     }
   )
+  .put('/:id/change-image', async (req, res: Response, next: NextFunction) => {
+    uploadSingle.any()(req, res, async (err: any) => {
+      try {
+        if (err) {
+          next(err);
+          return;
+        }
+
+        if (!req.files?.length) {
+          return res.status(400).json({ message: 'No files uploaded' });
+        }
+
+        for (const file of req.files) {
+          if (file.fieldname === 'image') {
+            const updateData = { image: file.path };
+
+            await Person.findOneAndUpdate({ _id: req.params.id }, updateData);
+
+            // const status = await db.projects.update(updateData, {
+            //   where: {
+            //     id: req.params.id,
+            //     userId: req.tokenData.data.id
+            //   }
+            // });
+
+            return res.json({
+              message: 'Image updated successfully!',
+              data: 'status'
+            });
+          }
+        }
+
+        res.status(400).json({ message: 'Image file not found in upload' });
+      } catch (e) {
+        if (req.files?.length) {
+          for (const file of req.files) {
+            fs.unlink(file.path, (err) => {
+              if (err) console.error(`Error deleting file: ${err}`);
+              else console.log(`${file.path} has been deleted`);
+            });
+          }
+        }
+
+        next(e);
+      }
+    });
+  })
   .delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await Person.deleteOne({ _id: req.params.id });
