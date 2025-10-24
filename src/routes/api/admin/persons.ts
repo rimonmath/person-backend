@@ -31,10 +31,11 @@ router
       try {
         const newPerson = new Person(req.validated!.body);
 
-        await newPerson.save();
+        const result = await newPerson.save();
 
         res.json({
-          message: 'Person Added Successfully!'
+          message: 'Person Added Successfully!',
+          result
         });
       } catch (err) {
         next(err);
@@ -59,12 +60,15 @@ router
   .put('/:id/change-image', async (req, res: Response, next: NextFunction) => {
     uploadSingle.any()(req, res, async (err: any) => {
       try {
+        console.log('11111111111111111');
         if (err) {
           next(err);
           return;
         }
 
         if (!req.files?.length) {
+          console.log('111111111222222222');
+
           return res.status(400).json({ message: 'No files uploaded' });
         }
 
@@ -72,7 +76,9 @@ router
           if (file.fieldname === 'image') {
             const updateData = { image: file.path };
 
-            await Person.findOneAndUpdate({ _id: req.params.id }, updateData);
+            const result = await Person.findOneAndUpdate({ _id: req.params.id }, updateData, {
+              new: true
+            });
 
             // const status = await db.projects.update(updateData, {
             //   where: {
@@ -83,13 +89,18 @@ router
 
             return res.json({
               message: 'Image updated successfully!',
-              data: 'status'
+              result
             });
           }
+
+          console.log('22222222222222222');
         }
+
+        console.log('333333333333333');
 
         res.status(400).json({ message: 'Image file not found in upload' });
       } catch (e) {
+        console.log('Unexpected EEEEE', e);
         if (req.files?.length) {
           for (const file of req.files) {
             fs.unlink(file.path, (err) => {
