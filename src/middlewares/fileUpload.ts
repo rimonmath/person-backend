@@ -1,54 +1,53 @@
-import multer, { FileFilterCallback } from 'multer';
+import multer from 'multer';
+import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
-import { Request } from 'express';
 
 // Helper: create directories if missing
-function ensureDir(dir: string): void {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+function ensureDir(dir: string) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-// Multer storage configuration
-const storage = multer.diskStorage({
-  destination: (req: Request, file, cb) => {
-    const today = new Date();
-    const month = today.getMonth() + 1;
-    const year = today.getFullYear();
+// Custom Multer storage engine using memoryStorage + Sharp
+const storage = multer.memoryStorage(); // store uploaded file in memory first
 
-    const yearDir = path.join('uploads', year.toString());
-    const monthDir = path.join(yearDir, month.toString());
-
-    ensureDir(monthDir);
-
-    cb(null, monthDir);
-  },
-
-  filename: (req: Request, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.ceil(Math.random() * 9_999_999);
-    const safeName = `${file.fieldname}-${uniqueSuffix}-${file.originalname}`;
-    cb(null, safeName);
-  }
-});
-
-// File filter with type safety
-const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback): void => {
-  if (!['image'].includes(file.fieldname)) {
-    return cb(new Error('Too many files not allowed'));
-  }
-  cb(null, true);
-};
-
-// Multer upload configurations
 export const uploadSingle = multer({
   storage,
   limits: { fileSize: 10_000_000 }, // 10 MB
-  fileFilter
-});
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only images allowed'));
+    }
+    cb(null, true);
+  }
+}).single('image');
 
-export const upload = multer({
-  storage,
-  limits: { fileSize: 10_000_000 },
-  fileFilter: (req, file, cb) => cb(null, true)
-});
+// Middleware wrapper to process image inside Multer workflow
+export const uploadAndProcess = async (req: any, res: any, next: any) => {
+  uploadSingle(req, res, async (err: any) => {
+    if (err) return next(err);
+    if (!req.file) return next();
+
+    try {
+      const today = new Date();
+      const month = today.getMonth() + 1;
+      const year = today.getFullYear();
+      const uploadDir = path.join('uploads', year.toString(), month.toString());
+      ensureDir(uploadDir);
+
+      const outputName = `${req.file.fieldname}-${Date.now()}.jpg`;
+      const outputPath = path.join(uploadDir, outputName);
+
+      // Resize and convert to JPEG
+      await sharp(req.file.buffer).resize(300, 300).jpeg({ quality: 90 }).toFile(outputPath);
+
+      // Replace req.file info with processed file
+      req.file.path = outputPath;
+      req.file.filename = outputName;
+
+      next();
+    } catch (err) {
+      next(err);
+    }
+  });
+};

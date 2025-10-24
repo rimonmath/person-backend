@@ -2,7 +2,7 @@ import express, { NextFunction, type Request, type Response } from 'express';
 import { ReqWithValidated, zValidator } from '../../../middlewares/zValidator.js';
 import { object as zObject, string as zString, email as zEmail, enum as zEnum } from 'zod';
 import { Person } from '../../../db/models/Person.js';
-import { uploadSingle } from '../../../middlewares/fileUpload.js';
+import { uploadAndProcess, uploadSingle } from '../../../middlewares/fileUpload.js';
 import fs from 'node:fs';
 const router = express.Router();
 
@@ -57,62 +57,37 @@ router
       }
     }
   )
-  .put('/:id/change-image', async (req, res: Response, next: NextFunction) => {
-    uploadSingle.any()(req, res, async (err: any) => {
-      try {
-        console.log('11111111111111111');
-        if (err) {
-          next(err);
-          return;
-        }
+  .put('/:id/change-image', uploadAndProcess, async (req, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file?.path) {
+        console.log('111111111222222222');
 
-        if (!req.files?.length) {
-          console.log('111111111222222222');
-
-          return res.status(400).json({ message: 'No files uploaded' });
-        }
-
-        for (const file of req.files) {
-          if (file.fieldname === 'image') {
-            const updateData = { image: file.path };
-
-            const result = await Person.findOneAndUpdate({ _id: req.params.id }, updateData, {
-              new: true
-            });
-
-            // const status = await db.projects.update(updateData, {
-            //   where: {
-            //     id: req.params.id,
-            //     userId: req.tokenData.data.id
-            //   }
-            // });
-
-            return res.json({
-              message: 'Image updated successfully!',
-              result
-            });
-          }
-
-          console.log('22222222222222222');
-        }
-
-        console.log('333333333333333');
-
-        res.status(400).json({ message: 'Image file not found in upload' });
-      } catch (e) {
-        console.log('Unexpected EEEEE', e);
-        if (req.files?.length) {
-          for (const file of req.files) {
-            fs.unlink(file.path, (err) => {
-              if (err) console.error(`Error deleting file: ${err}`);
-              else console.log(`${file.path} has been deleted`);
-            });
-          }
-        }
-
-        next(e);
+        return res.status(400).json({ message: 'No files uploaded' });
       }
-    });
+
+      const updateData = { image: req.file.path };
+
+      const result = await Person.findOneAndUpdate({ _id: req.params.id }, updateData, {
+        new: true
+      });
+
+      return res.json({
+        message: 'Image updated successfully!',
+        result
+      });
+    } catch (e) {
+      console.log('Unexpected EEEEE', e);
+      // if (req.files?.length) {
+      //   for (const file of req.files) {
+      //     fs.unlink(file.path, (err) => {
+      //       if (err) console.error(`Error deleting file: ${err}`);
+      //       else console.log(`${file.path} has been deleted`);
+      //     });
+      //   }
+      // }
+
+      next(e);
+    }
   })
   .delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
