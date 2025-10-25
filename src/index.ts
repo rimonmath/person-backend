@@ -33,7 +33,7 @@ var allowedOrigins = [
   'http://localhost:4173',
   'http://localhost:5173',
   'https://person-monorepo-frontend.vercel.app',
-  'https://person-frontend.vercel.app/'
+  'https://person-frontend.vercel.app'
 ];
 
 app.use(
