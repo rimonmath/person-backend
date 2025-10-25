@@ -53,7 +53,7 @@ router.post(
       const accessTokenPayload = {
         userId: user._id,
         userType: user.user_type,
-        exp: now + 60 * 5000 // 5000 mins
+        exp: now + 60 * 60 * 1000 * 24 * 30 // 30 days
       };
 
       const accessToken = jwt.sign(
